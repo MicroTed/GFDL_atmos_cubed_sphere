@@ -198,6 +198,8 @@ module fv_diagnostics_mod
  public :: max_vv,get_vorticity,max_uh 
  public :: max_vorticity,max_vorticity_hy1,bunkers_vector
  public :: helicity_relative_CAPS 
+ public :: interpolate_z_new
+
 
 #ifdef FEWER_PLEVS
  integer, parameter :: nplev = 10 ! 31 ! lmh
@@ -6411,6 +6413,61 @@ end subroutine eqv_pot
 
 
   end subroutine sounding_column
+
+subroutine interpolate_z_new(is, ie, js, je, ng, km, zvir, sphum, &
+                 delz, q, hydrostatic, pt, peln, grav, z_bot,z_top,a,a_intrp)
+! !INPUT PARAMETERS:
+   integer, intent(in):: is, ie, js, je, ng, km, sphum
+   real, intent(in):: grav, zvir, z_bot, z_top
+   real, intent(in), dimension(is-ng:ie+ng,js-ng:je+ng,km):: pt
+   real, intent(in):: delz(is:ie,js:je,km)
+   real, intent(in):: q(is-ng:ie+ng,js-ng:je+ng,km,*)
+   real, intent(in):: peln(is:ie,km+1,js:je)
+   logical, intent(in):: hydrostatic
+   real, intent(in) :: a(is-ng:ie+ng,js-ng:je+ng,km)
+   real, intent(out):: a_intrp(is:ie,js:je)   ! interpolatd array
+
+   real:: rdg,dz
+   real, dimension(km+1):: zh
+   integer i, j, k, k0, k1, n,kp1
+   logical below
+
+   rdg = rdgas / grav
+
+!$OMP parallel do default(none) shared(is,ie,js,je,km,hydrostatic,rdg,pt,zvir,sphum, &
+#ifdef MULTI_GASES
+!$OMP                                  num_gas,                               &
+#endif
+!$OMP                                  peln,delz,z_bot,z_top,a,a_intrp) &
+!$OMP                          private(zh,dz,k0,k1,below,kp1)
+   do j=js,je
+
+      do i=is,ie
+         below = .true.
+         zh(km)=0.
+         do k=km,1,-1
+            kp1=k-1
+            if ( hydrostatic ) then
+#ifdef MULTI_GASES
+                 dz =rdg*pt(i,j,k)*virq(q(i,j,k,1:num_gas))*(peln(i,k+1,j)-peln(i,k,j))
+#else
+                 dz =rdg*pt(i,j,k)*(1.+zvir*q(i,j,k,sphum))*(peln(i,k+1,j)-peln(i,k,j))
+#endif
+            else
+                 dz = -delz(i,j,k)
+            endif
+            
+            zh(kp1) = zh(kp1+1) + dz
+            if (zh(kp1) > z_top .and. zh(kp1+1) < z_top) then
+               k1 = kp1
+               k0 = kp1+1
+               a_intrp(i,j) = a(i,j,k0)+(a(i,j,k1)-a(i,j,k0))/(zh(k1)-zh(k0))*(z_top-zh(k0))
+               exit
+            endif
+         enddo
+      enddo  ! i-loop
+   enddo   ! j-loop
+end subroutine interpolate_z_new
 
 
 end module fv_diagnostics_mod

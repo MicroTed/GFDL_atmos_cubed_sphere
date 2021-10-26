@@ -46,6 +46,7 @@ module fv_arrays_mod
 #else
   real, parameter:: real_big = 1.e30   ! big enough to cause blowup if used
 #endif
+  real, parameter:: real_big0 = 0.0 ! 1.e30   ! big enough to cause blowup if used
   type fv_diag_type
 
 
@@ -113,6 +114,10 @@ module fv_arrays_mod
 
      real :: efx(max_step), efx_sum, efx_nest(max_step), efx_sum_nest, mtq(max_step), mtq_sum
      integer :: steps
+
+     !for hailcast
+     integer :: id_hailcast_dhail1, id_hailcast_dhail2, id_hailcast_dhail3, id_hailcast_dhail4, id_hailcast_dhail5
+     integer :: id_hailcast_diam_mean, id_hailcast_diam_std
 
   end type fv_diag_type
 
@@ -1609,14 +1614,14 @@ contains
         do n=1,nq
         do j=jsd, jed
            do i=isd, ied
-              Atm%q(i,j,k,n) = real_big
+              Atm%q(i,j,k,n) = real_big0
            enddo
         enddo
         enddo
         do n=nq+1,ncnst
         do j=jsd, jed
            do i=isd, ied
-              Atm%qdiag(i,j,k,n) = real_big
+              Atm%qdiag(i,j,k,n) = real_big0
            enddo
         enddo
         enddo

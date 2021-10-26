@@ -387,7 +387,7 @@ contains
 !
       if (is_master()) then
         write(*,20011)trim(file_name)
-20011   format(' regional_bc_data file_name=',a)
+20011   format(' regional_bc_data X file_name=',a)
       endif
 !-----------------------------------------------------------------------
 !***  Open the regional BC file.
@@ -1095,6 +1095,8 @@ contains
 !
       vname='x'                                                            !<-- Geographic_longitude (degrees east) in netcdf file
       call check(nf90_inq_varid(ncid_grid,vname,var_id))                   !<-- Get the variable ID.
+      call  mpp_error(NOTE,' read logitude ')
+
       call check(nf90_get_var(ncid_grid,var_id                          &
                              ,grid_reg(isd-1:ied+2,jsd-1:jed+2,1)       &  !<-- Longitude of grid cell corners
                              ,start=(/i_start_data,j_start_data/)       &
@@ -1105,6 +1107,7 @@ contains
 !--------------
 !
       vname='y'                                                            !<-- Geographic_latitude (degrees north) in netcdf file
+      call  mpp_error(NOTE,' read latitude ')
       call check(nf90_inq_varid(ncid_grid,vname,var_id))                   !<-- Get the variable ID.
       call check(nf90_get_var(ncid_grid,var_id                          &
                              ,grid_reg(isd-1:ied+2,jsd-1:jed+2,2)       &  !<-- Latitude of grid cell corners
@@ -1129,6 +1132,8 @@ contains
 !***  Compute the longitude/latitude in the cell centers.
 !-----------------------------------------------------------------------
 !
+      call  mpp_error(NOTE,' cell_center ')
+
       do j=jsd-1,jed+1
       do i=isd-1,ied+1
         call cell_center2(grid_reg(i,j,  1:2), grid_reg(i+1,j,  1:2),   &
@@ -1136,6 +1141,7 @@ contains
                           agrid_reg(i,j,1:2) )
       enddo
       enddo
+      call  mpp_error(NOTE,' end read_regional_lon_lat')
 !
 !-----------------------------------------------------------------------
 !
@@ -1204,6 +1210,11 @@ contains
         phis_reg(i,j)=phis_reg(i,j)*grav
       enddo
       enddo
+
+     if (is_master()) then
+        write(*,*) 'end of read_topo'
+      endif
+
 !
 !-----------------------------------------------------------------------
 !***********************************************************************
@@ -1633,7 +1644,7 @@ contains
 !
       if (is_master()) then
         write(*,22211)trim(file_name)
-22211   format(' regional_bc_data file_name=',a)
+22211   format(' regional_bc_data Y file_name=',a)
       endif
 !-----------------------------------------------------------------------
 !***  Open the regional BC file.
@@ -1685,6 +1696,9 @@ contains
 !***  Sfc pressure
 !------------------
 !
+      if (is_master()) then
+        write(*,*) 'call read_regional_bc_file'
+      endif
       nlev=1
       var_name_root='ps'
       call read_regional_bc_file(is_input,ie_input,js_input,je_input    &
@@ -1725,7 +1739,7 @@ contains
 !***  Sensible temperature
 !--------------------------
 !
-      if (data_source == 'FV3GFS GAUSSIAN NEMSIO FILE') then
+      !if (data_source == 'FV3GFS GAUSSIAN NEMSIO FILE') then
         nlev=klev_in
         var_name_root='t'
         call read_regional_bc_file(is_input,ie_input,js_input,je_input  &
@@ -1734,7 +1748,7 @@ contains
 !                                 ,Atm%regional_bc_bounds               &
                                   ,var_name_root                        &
                                   ,array_3d=t_input)
-      endif
+      !endif
 !
 !-----------------------------
 !***  U component south/north
